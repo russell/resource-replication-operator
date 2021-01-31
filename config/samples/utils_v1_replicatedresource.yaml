@@ -1,0 +1,7 @@
+apiVersion: utils.simopolis.xyz/v1
+kind: ReplicatedResource
+metadata:
+  name: replicatedresource-sample
+spec:
+  # Add fields here
+  foo: bar

@@ -1,0 +1,24 @@
+# permissions for end users to edit replicatedresources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: replicatedresource-editor-role
+rules:
+- apiGroups:
+  - utils.simopolis.xyz
+  resources:
+  - replicatedresources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - utils.simopolis.xyz
+  resources:
+  - replicatedresources/status
+  verbs:
+  - get
