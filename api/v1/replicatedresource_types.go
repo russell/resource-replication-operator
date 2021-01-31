@@ -17,25 +17,64 @@ limitations under the License.
 package v1
 
 import (
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// ReplicatedResourceSpec defines the desired state of ReplicatedResource
+type ReplicatedResourceSource struct {
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Kind      string `json:"kind,omitempty"`
+}
 
 // ReplicatedResourceSpec defines the desired state of ReplicatedResource
 type ReplicatedResourceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ReplicatedResource. Edit ReplicatedResource_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Source ReplicatedResourceSource `json:"source,omitempty"`
+}
+
+type ReplicatedResourceConditionType string
+
+// These are valid conditions of a ReplicatedResource.
+const (
+	// ReplicatedResourceComplete means the ReplicatedResource has completed its execution.
+	ReplicatedResourceComplete ReplicatedResourceConditionType = "Complete"
+	// ReplicatedResourceFailed means the ReplicatedResource has failed its execution.
+	ReplicatedResourceFailed ReplicatedResourceConditionType = "Failed"
+)
+
+// ReplicatedResourceCondition describes current state of a ReplicatedResource.
+type ReplicatedResourceCondition struct {
+	// Type of ReplicatedResource condition, Complete or Failed.
+	Type ReplicatedResourceConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=ReplicatedResourceConditionType"`
+	// Status of the condition, one of True, False, Unknown.
+	Status v1.ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=k8s.io/api/core/v1.ConditionStatus"`
+	// Last time the condition was checked.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty" protobuf:"bytes,3,opt,name=lastProbeTime"`
+	// Last time the condition transit from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty" protobuf:"bytes,4,opt,name=lastTransitionTime"`
+	// (brief) reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty" protobuf:"bytes,5,opt,name=reason"`
+	// Human readable message indicating details about last transition.
+	// +optional
+	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
 }
 
 // ReplicatedResourceStatus defines the observed state of ReplicatedResource
 type ReplicatedResourceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Phase                 string                        `json:"phase,omitempty"`
+	Namespace             string                        `json:"namespace,omitempty"`
+	Name                  string                        `json:"name,omitempty"`
+	Kind                  string                        `json:"kind,omitempty"`
+	ReplicatedAt          string                        `json:"replicatedAt,omitempty"`
+	ReplicatedFromVersion string                        `json:"replicatedFromVersion,omitempty"`
+	Conditions            []ReplicatedResourceCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // +kubebuilder:object:root=true
