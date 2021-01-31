@@ -19,20 +19,17 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	utilsv1 "github.com/russell/resource-replication-operator/api/v1"
-	"github.com/russell/resource-replication-operator/replicator/common"
+	"github.com/russell/resource-replication-operator/replicator"
 )
 
 // ReplicatedResourceReconciler reconciles a ReplicatedResource object
@@ -62,7 +59,7 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		} else {
-			log.Info("Could not find ReplicatedResource")
+			log.Info("Could not find ReplicatedResource. Ignoring since object must be deleted.")
 			return ctrl.Result{}, nil
 		}
 	}
@@ -77,56 +74,8 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	if sourceKind == "Secret" {
-		log.Info("Replicating secret")
-		source := &corev1.Secret{}
-		if err := r.Get(ctx, sourceNamespacedName, source); err != nil {
-			if !errors.IsNotFound(err) {
-				log.Info("Error reading source")
-				return ctrl.Result{}, err
-			} else {
-				log.Info("Could not find source secret")
-				return ctrl.Result{}, nil
-			}
-		}
-
-		destNamespacedName := types.NamespacedName{Namespace: rr.Namespace, Name: rr.Name}
-
-		dest := &corev1.Secret{}
-		if err := r.Get(ctx, destNamespacedName, dest); err != nil {
-			if !errors.IsNotFound(err) {
-				log.Info("Error reading dest")
-				return ctrl.Result{}, err
-			} else {
-				dest.Type = source.Type
-			}
-		}
-
-		dest.ObjectMeta.Namespace = rr.ObjectMeta.Namespace
-		dest.ObjectMeta.Name = rr.ObjectMeta.Name
-
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, dest, func() error {
-			if dest.Annotations == nil {
-				dest.Annotations = make(map[string]string)
-			}
-			dest.Annotations[common.ReplicatedAtAnnotation] = time.Now().Format(time.RFC3339)
-			dest.Annotations[common.ReplicatedFromVersionAnnotation] = source.ResourceVersion
-			dest.Data = source.Data
-			t := true
-			dest.SetOwnerReferences(
-				[]metav1.OwnerReference{
-					{
-						Name:               rr.Name,
-						Kind:               rr.Kind,
-						APIVersion:         rr.APIVersion,
-						UID:                rr.UID,
-						Controller:         &t,
-						BlockOwnerDeletion: &t,
-					},
-				},
-			)
-			return nil
-		})
-		log.Info(fmt.Sprintf("Updated Secret %s", op))
+		sr := replicator.SecretReplicator{Client: r.Client, Log: r.Log}
+		_, err := sr.ReplicateSecret(ctx, rr)
 		return ctrl.Result{}, err
 	}
 	log.Info(fmt.Sprintf("Unsupported kind %s", sourceKind))
