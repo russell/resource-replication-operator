@@ -68,13 +68,8 @@ type ReplicatedResourceCondition struct {
 
 // ReplicatedResourceStatus defines the observed state of ReplicatedResource
 type ReplicatedResourceStatus struct {
-	Phase                 string                        `json:"phase,omitempty"`
-	Namespace             string                        `json:"namespace,omitempty"`
-	Name                  string                        `json:"name,omitempty"`
-	Kind                  string                        `json:"kind,omitempty"`
-	ReplicatedAt          string                        `json:"replicatedAt,omitempty"`
-	ReplicatedFromVersion string                        `json:"replicatedFromVersion,omitempty"`
-	Conditions            []ReplicatedResourceCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	Phase      string                        `json:"phase,omitempty"`
+	Conditions []ReplicatedResourceCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // +kubebuilder:object:root=true

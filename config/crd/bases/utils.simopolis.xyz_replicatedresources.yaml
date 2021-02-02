@@ -84,17 +84,7 @@ spec:
                   - type
                   type: object
                 type: array
-              kind:
-                type: string
-              name:
-                type: string
-              namespace:
-                type: string
               phase:
-                type: string
-              replicatedAt:
-                type: string
-              replicatedFromVersion:
                 type: string
             type: object
         type: object
