@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-logr/logr"
-	utilsv1 "github.com/russell/resource-replication-operator/api/v1"
+	utilsv1alpha1 "github.com/russell/resource-replication-operator/api/v1alpha1"
 	"github.com/russell/resource-replication-operator/replicator/common"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +37,7 @@ type SecretReplicator struct {
 	Log logr.Logger
 }
 
-func (r *SecretReplicator) ReplicateSecret(ctx context.Context, rep *utilsv1.ReplicatedResource) (controllerutil.OperationResult, *corev1.Secret, error) {
+func (r *SecretReplicator) ReplicateSecret(ctx context.Context, rep *utilsv1alpha1.ReplicatedResource) (controllerutil.OperationResult, *corev1.Secret, error) {
 	sourceNamespacedName := types.NamespacedName{Namespace: rep.Spec.Source.Namespace, Name: rep.Spec.Source.Name}
 	destNamespacedName := types.NamespacedName{Namespace: rep.Namespace, Name: rep.Name}
 
@@ -98,6 +98,6 @@ func (r *SecretReplicator) ReplicateSecret(ctx context.Context, rep *utilsv1.Rep
 	return op, dest, err
 }
 
-func SecretNeedsUpdating(rep utilsv1.ReplicatedResource, secret corev1.Secret) (bool, error) {
+func SecretNeedsUpdating(rep utilsv1alpha1.ReplicatedResource, secret corev1.Secret) (bool, error) {
 	return false, nil
 }

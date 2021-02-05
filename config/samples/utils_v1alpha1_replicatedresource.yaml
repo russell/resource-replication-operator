@@ -1,4 +1,4 @@
-apiVersion: utils.simopolis.xyz/v1
+apiVersion: utils.simopolis.xyz/v1alpha1
 kind: ReplicatedResource
 metadata:
   name: replicatedresource-sample

@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	utilsv1 "github.com/russell/resource-replication-operator/api/v1"
+	utilsv1alpha1 "github.com/russell/resource-replication-operator/api/v1alpha1"
 	"github.com/russell/resource-replication-operator/replicator"
 )
 
@@ -58,7 +58,7 @@ type ReplicatedResourceReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
 func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("replicatedresource", req.NamespacedName)
-	rr := &utilsv1.ReplicatedResource{}
+	rr := &utilsv1alpha1.ReplicatedResource{}
 	if err := r.Get(ctx, req.NamespacedName, rr); err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err
@@ -93,8 +93,8 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if op == controllerutil.OperationResultCreated || op == controllerutil.OperationResultUpdated {
 		log.Info(fmt.Sprintf("Did %s", op))
 		rr.Status.Phase = "Completed"
-		rr.Status.Conditions = []utilsv1.ReplicatedResourceCondition{{
-			Type:               utilsv1.ReplicatedResourceComplete,
+		rr.Status.Conditions = []utilsv1alpha1.ReplicatedResourceCondition{{
+			Type:               utilsv1alpha1.ReplicatedResourceComplete,
 			Status:             corev1.ConditionTrue,
 			LastProbeTime:      v1.Now(),
 			LastTransitionTime: v1.Now(),
@@ -119,7 +119,7 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReplicatedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&utilsv1.ReplicatedResource{}).
+		For(&utilsv1alpha1.ReplicatedResource{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Complete(r)

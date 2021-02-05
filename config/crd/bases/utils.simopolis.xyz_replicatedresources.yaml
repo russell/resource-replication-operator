@@ -16,7 +16,7 @@ spec:
     singular: replicatedresource
   scope: Namespaced
   versions:
-  - name: v1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ReplicatedResource is the Schema for the replicatedresources
