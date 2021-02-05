@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -71,6 +72,8 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	sourceNamespacedName := types.NamespacedName{Namespace: rr.Spec.Source.Namespace, Name: rr.Spec.Source.Name}
 	sourceKind := rr.Spec.Source.Kind
+	var replicateError error = nil
+	requeueAfter := time.Duration(0)
 
 	if req.NamespacedName == sourceNamespacedName {
 		log.Info("Can't replicate when the source matches the source")
@@ -80,18 +83,24 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if sourceKind == "Secret" {
 		sr := replicator.SecretReplicator{Client: r.Client, Log: r.Log}
 		operation, _, err := sr.ReplicateSecret(ctx, rr)
-		if err != nil {
-			log.Info("Error Replicating")
-			return ctrl.Result{}, err
-		}
 		op = operation
+		replicateError = err
 	} else {
-		log.Info(fmt.Sprintf("Unsupported kind %s", sourceKind))
-		return ctrl.Result{}, nil
+		replicateError = fmt.Errorf("Unsupported kind %s", sourceKind)
 	}
 
-	if op == controllerutil.OperationResultCreated || op == controllerutil.OperationResultUpdated {
-		log.Info(fmt.Sprintf("Did %s", op))
+	if replicateError != nil {
+		rr.Status.Phase = "Failed"
+		rr.Status.Conditions = []utilsv1alpha1.ReplicatedResourceCondition{{
+			Type:               utilsv1alpha1.ReplicatedResourceComplete,
+			Status:             corev1.ConditionTrue,
+			LastProbeTime:      v1.Now(),
+			LastTransitionTime: v1.Now(),
+			Reason:             "Error",
+			Message:            replicateError.Error(),
+		}}
+
+	} else if op == controllerutil.OperationResultCreated || op == controllerutil.OperationResultUpdated {
 		rr.Status.Phase = "Completed"
 		rr.Status.Conditions = []utilsv1alpha1.ReplicatedResourceCondition{{
 			Type:               utilsv1alpha1.ReplicatedResourceComplete,
@@ -101,14 +110,14 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 			Reason:             "Replicated",
 			Message:            "Successfully Replicated",
 		}}
-
+	} else {
+		log.Info("Successfully Replicated")
+		return ctrl.Result{}, nil
 	}
 
 	if err := r.Status().Update(ctx, rr); err != nil {
 		log.Info(fmt.Sprintf("Error updating ReplicatedResource: %s", err))
-		return ctrl.Result{}, err
-	} else {
-		// log.Info(fmt.Sprintf("Updated ReplicatedResource: %s", rr.Status.Phase))
+		return ctrl.Result{RequeueAfter: requeueAfter}, err
 	}
 
 	log.Info("Successfully Replicated")
