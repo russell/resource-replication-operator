@@ -23,6 +23,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+SHELL := /bin/bash
+
 all: manager
 
 # Run tests
@@ -38,7 +40,7 @@ manager: generate fmt vet
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
-	go run ./main.go
+	go run ./main.go -zap-devel
 
 # Install CRDs into a cluster
 install: manifests kustomize
