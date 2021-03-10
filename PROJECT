@@ -1,6 +1,6 @@
 domain: simopolis.xyz
 layout: go.kubebuilder.io/v3
-projectName: replicate-operator
+projectName: replication-operator
 repo: github.com/russell/resource-replication-operator
 resources:
 - crdVersion: v1

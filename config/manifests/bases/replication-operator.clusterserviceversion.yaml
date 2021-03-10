@@ -1,0 +1,50 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: replication-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: ReplicatedResource is the Schema for the replicatedresources API
+      displayName: Replicated Resource
+      kind: ReplicatedResource
+      name: replicatedresources.utils.simopolis.xyz
+      version: v1alpha1
+  description: Replicates kubernetes resources between namespaces
+  displayName: Resource Replication Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - utilitiy
+  - replication
+  - secret
+  links:
+  - name: Replication Operator
+    url: https://replication-operator.domain
+  maintainers:
+  - email: russell.sim@gmail.com
+    name: Russell Sim
+  maturity: alpha
+  provider:
+    name: russell
+    url: https://github.com/russell/resource-replication-operator/
+  version: 0.0.0
