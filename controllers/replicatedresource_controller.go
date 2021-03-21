@@ -45,8 +45,7 @@ type ReplicatedResourceReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=utils.simopolis.xyz,resources=replicatedresources,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=configmap,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets;configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=utils.simopolis.xyz,resources=replicatedresources/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=utils.simopolis.xyz,resources=replicatedresources/finalizers,verbs=update
 
