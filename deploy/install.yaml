@@ -129,7 +129,9 @@ metadata:
   creationTimestamp: null
   name: replication-operator-manager-role
 rules:
-- resources:
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   - create
