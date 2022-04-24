@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -34,7 +35,8 @@ import (
 
 type SecretReplicator struct {
 	client.Client
-	Log logr.Logger
+	Log    logr.Logger
+	Scheme *runtime.Scheme
 }
 
 func (r *SecretReplicator) ReplicateSecret(ctx context.Context, rep *utilsv1alpha1.ReplicatedResource) (controllerutil.OperationResult, *corev1.Secret, error) {
@@ -45,18 +47,18 @@ func (r *SecretReplicator) ReplicateSecret(ctx context.Context, rep *utilsv1alph
 		"type", "secret",
 		"source", fmt.Sprintf("%s/%s", sourceNamespacedName.Namespace, sourceNamespacedName.Name),
 		"destination", fmt.Sprintf("%s/%s", destNamespacedName.Namespace, destNamespacedName.Name))
-	log.Info("Replicating")
 	source := &corev1.Secret{}
 	if err := r.Get(ctx, sourceNamespacedName, source); err != nil {
 		if !kerrors.IsNotFound(err) {
 			log.Info("Error reading source")
 			return controllerutil.OperationResultNone, nil, err
 		} else {
-			log.Info("Could not find source secret")
+			log.Info("Could not find source Secret")
 			return controllerutil.OperationResultNone, nil, errors.New(fmt.Sprintf("Could not find source secret %s/%s",
 				rep.Spec.Source.Namespace, rep.Spec.Source.Name))
 		}
 	}
+	log.Info(fmt.Sprintf("Replicating Secret resourceVersion: %s", source.ResourceVersion))
 
 	t := true
 	owners := []metav1.OwnerReference{
@@ -89,15 +91,12 @@ func (r *SecretReplicator) ReplicateSecret(ctx context.Context, rep *utilsv1alph
 		}
 		dest.Annotations[common.ReplicatedAtAnnotation] = time.Now().Format(time.RFC3339)
 		dest.Annotations[common.ReplicatedFromVersionAnnotation] = source.ResourceVersion
+		log.Info(fmt.Sprintf("Updating secret %s", source.ResourceVersion))
 		dest.Type = source.Type
 		dest.Data = source.Data
 		return nil
 	})
 	log.Info(fmt.Sprintf("Updated Secret %s", op))
-	log.Info(fmt.Sprintf("Updated err %s", err))
-	return op, dest, err
-}
 
-func SecretNeedsUpdating(rep utilsv1alpha1.ReplicatedResource, secret corev1.Secret) (bool, error) {
-	return false, nil
+	return op, dest, err
 }

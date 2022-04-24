@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"time"
 
@@ -45,9 +46,9 @@ var _ = Describe("CronJob controller", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When updating ReplicatedResource Status", func() {
-		It("Should increase ReplicatedResource Status.Active count when new Jobs are created", func() {
-			By("By creating a new ReplicatedResource")
+	Context("When creating ReplicatedResource", func() {
+		It("Should replicate a secret", func() {
+			By("By creating a new Secret")
 			ctx := context.Background()
 			secret := &corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -67,14 +68,16 @@ var _ = Describe("CronJob controller", func() {
 
 			// Wait for secret to be created
 			secretLookupKey := types.NamespacedName{Name: SecretName, Namespace: SecretNamespace}
+			createdSecret := &corev1.Secret{}
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, secretLookupKey, &corev1.Secret{})
+				err := k8sClient.Get(ctx, secretLookupKey, createdSecret)
 				if err != nil {
 					return false
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
 
+			By("By creating a new ReplicatedResource")
 			replicatedResource := &utilsv1alpha1.ReplicatedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "utils.simopolis.xyz/v1alpha1",
@@ -93,6 +96,7 @@ var _ = Describe("CronJob controller", func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, replicatedResource)).Should(Succeed())
+
 			replicatedResourceLookupKey := types.NamespacedName{Name: ReplicatedResourceName, Namespace: ReplicatedResourceNamespace}
 			createdReplicatedResource := &utilsv1alpha1.ReplicatedResource{}
 
@@ -108,20 +112,58 @@ var _ = Describe("CronJob controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			replicatedSecretLookupKey := types.NamespacedName{Name: ReplicatedResourceName, Namespace: ReplicatedResourceNamespace}
-			createdSecret := &corev1.Secret{}
+			replicatedSecret := &corev1.Secret{}
 
 			// We'll need to retry getting this newly created
 			// ReplicatedResource, given that creation may not
 			// immediately happen.
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, replicatedSecretLookupKey, createdSecret)
+				err := k8sClient.Get(ctx, replicatedSecretLookupKey, replicatedSecret)
 				if err != nil {
 					return false
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
 			// Let's make sure our Schedule string value was properly converted/handled.
-			Expect(createdSecret.Data["test"]).Should(Equal([]byte("dGhpcyBpcyBhIHRlc3Qu")))
+			Expect(replicatedSecret.Data["test"]).Should(Equal([]byte("dGhpcyBpcyBhIHRlc3Qu")))
+
+			By("By updating the secret")
+			createdSecret.Data = map[string][]byte{
+				"test": []byte("dGhpcyBpcyBhbm90aGVyIHRlc3Qu"),
+			}
+			Expect(k8sClient.Update(ctx, createdSecret)).Should(Succeed())
+
+			// Wait for the secret to have the right value
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, secretLookupKey, createdSecret)
+				if err != nil {
+					return false
+				}
+
+				// Wait for the bytes to equal
+				if bytes.Equal(createdSecret.Data["test"], []byte("dGhpcyBpcyBhbm90aGVyIHRlc3Qu")) {
+					return true
+				}
+
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			// Wait for the replicated secret to have the right value
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, replicatedSecretLookupKey, replicatedSecret)
+				if err != nil {
+					return false
+				}
+
+				// Wait for the bytes to equal
+				if bytes.Equal(replicatedSecret.Data["test"], []byte("dGhpcyBpcyBhbm90aGVyIHRlc3Qu")) {
+					return true
+				}
+
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(false).Should(BeTrue())
 		})
 	})
 })

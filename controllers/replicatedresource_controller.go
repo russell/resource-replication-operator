@@ -26,11 +26,17 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	utilsv1alpha1 "github.com/russell/resource-replication-operator/api/v1alpha1"
 	"github.com/russell/resource-replication-operator/replicator"
@@ -42,6 +48,12 @@ type ReplicatedResourceReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
+
+const (
+	nameField      = ".spec.source.name"
+	namespaceField = ".spec.source.namespace"
+	kindField      = ".spec.source.kind"
+)
 
 // +kubebuilder:rbac:groups=utils.simopolis.xyz,resources=replicatedresources,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets;configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -72,7 +84,7 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 	var op controllerutil.OperationResult
 	if sourceKind == "Secret" {
-		sr := replicator.SecretReplicator{Client: r.Client, Log: r.Log}
+		sr := replicator.SecretReplicator{Client: r.Client, Log: r.Log, Scheme: r.Scheme}
 		operation, _, err := sr.ReplicateSecret(ctx, rr)
 		op = operation
 		replicateError = err
@@ -116,11 +128,86 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
+func (r *ReplicatedResourceReconciler) findObjectsForSecret(obj client.Object) []reconcile.Request {
+	return r.findObjectsForReplicatedResource(obj, "Secret")
+}
+
+func (r *ReplicatedResourceReconciler) findObjectsForReplicatedResource(obj client.Object, objKind string) []reconcile.Request {
+	attachedReplicatedResource := &utilsv1alpha1.ReplicatedResourceList{}
+
+	objName := obj.GetName()
+	objNamespace := obj.GetNamespace()
+
+	r.Log.Info(fmt.Sprintf("Dependent %s/%s of kind %s updated triggering a refresh", objNamespace, objName, objKind))
+
+	// Filter the list of replicated resources by the ones that
+	// target this object by name and namespace
+	listOps := &client.ListOptions{
+		FieldSelector: fields.AndSelectors(
+			fields.OneTermEqualSelector(kindField, objKind),
+			fields.OneTermEqualSelector(nameField, objName),
+			fields.OneTermEqualSelector(namespaceField, objNamespace)),
+	}
+	err := r.List(context.TODO(), attachedReplicatedResource, listOps)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, len(attachedReplicatedResource.Items))
+	for i, item := range attachedReplicatedResource.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+			},
+		}
+	}
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReplicatedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &utilsv1alpha1.ReplicatedResource{}, nameField, func(rawObj client.Object) []string {
+		// Extract the name from the ReplicatedResource Spec, if one is provided
+		replicatedResource := rawObj.(*utilsv1alpha1.ReplicatedResource)
+		if replicatedResource.Spec.Source.Name == "" {
+			return nil
+		}
+		return []string{replicatedResource.Spec.Source.Name}
+	}); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &utilsv1alpha1.ReplicatedResource{}, namespaceField, func(rawObj client.Object) []string {
+		// Extract the namespace from the ReplicatedResource Spec, if one is provided
+		replicatedResource := rawObj.(*utilsv1alpha1.ReplicatedResource)
+		if replicatedResource.Spec.Source.Namespace == "" {
+			return nil
+		}
+		return []string{replicatedResource.Spec.Source.Namespace}
+	}); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &utilsv1alpha1.ReplicatedResource{}, kindField, func(rawObj client.Object) []string {
+		// Extract the namespace from the ReplicatedResource Spec, if one is provided
+		replicatedResource := rawObj.(*utilsv1alpha1.ReplicatedResource)
+		if replicatedResource.Spec.Source.Kind == "" {
+			return nil
+		}
+		return []string{replicatedResource.Spec.Source.Kind}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&utilsv1alpha1.ReplicatedResource{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSecret),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
 }
