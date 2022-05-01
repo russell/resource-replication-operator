@@ -162,8 +162,6 @@ var _ = Describe("CronJob controller", func() {
 
 				return false
 			}, timeout, interval).Should(BeTrue())
-
-			Expect(false).Should(BeTrue())
 		})
 	})
 })
