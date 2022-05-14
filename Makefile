@@ -29,7 +29,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # russellsim/resource-replication-operator-bundle-bundle:$VERSION and russellsim/resource-replication-operator-bundle-catalog:$VERSION.
-IMAGE_TAG_BASE ?= russellsim/resource-replication-operator-bundle
+IMAGE_TAG_BASE ?= ghcr.io/russell/resource-replication-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -108,6 +108,9 @@ docker-push: ## Push docker image with the manager.
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+
+install.yaml: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/default > deploy/install.yaml
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -

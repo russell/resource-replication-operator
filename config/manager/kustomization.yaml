@@ -12,5 +12,5 @@ configMapGenerator:
   name: manager-config
 images:
 - name: controller
-  newName: russellsim/resource-replication-operator
+  newName: ghcr.io/russell/resource-replication-operator
   newTag: latest

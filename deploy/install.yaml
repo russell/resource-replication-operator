@@ -9,7 +9,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: v0.6.1
   creationTimestamp: null
   name: replicatedresources.utils.simopolis.xyz
 spec:
@@ -24,13 +24,18 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ReplicatedResource is the Schema for the replicatedresources API
+        description: ReplicatedResource is the Schema for the replicatedresources
+          API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -53,18 +58,21 @@ spec:
             properties:
               conditions:
                 items:
-                  description: ReplicatedResourceCondition describes current state of a ReplicatedResource.
+                  description: ReplicatedResourceCondition describes current state
+                    of a ReplicatedResource.
                   properties:
                     lastProbeTime:
                       description: Last time the condition was checked.
                       format: date-time
                       type: string
                     lastTransitionTime:
-                      description: Last time the condition transit from one status to another.
+                      description: Last time the condition transit from one status
+                        to another.
                       format: date-time
                       type: string
                     message:
-                      description: Human readable message indicating details about last transition.
+                      description: Human readable message indicating details about
+                        last transition.
                       type: string
                     reason:
                       description: (brief) reason for the condition's last transition.
@@ -73,7 +81,8 @@ spec:
                       description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type of ReplicatedResource condition, Complete or Failed.
+                      description: Type of ReplicatedResource condition, Complete
+                        or Failed.
                       type: string
                   required:
                   - status
@@ -95,6 +104,12 @@ status:
   conditions: []
   storedVersions: []
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: replication-operator-controller-manager
+  namespace: replication-operator-system
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -103,9 +118,20 @@ metadata:
 rules:
 - apiGroups:
   - ""
-  - coordination.k8s.io
   resources:
   - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  - coordination.k8s.io
+  resources:
   - leases
   verbs:
   - get
@@ -208,7 +234,7 @@ roleRef:
   name: replication-operator-leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: replication-operator-controller-manager
   namespace: replication-operator-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -221,7 +247,7 @@ roleRef:
   name: replication-operator-manager-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: replication-operator-controller-manager
   namespace: replication-operator-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -234,7 +260,7 @@ roleRef:
   name: replication-operator-proxy-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: replication-operator-controller-manager
   namespace: replication-operator-system
 ---
 apiVersion: v1
@@ -267,6 +293,7 @@ spec:
   ports:
   - name: https
     port: 8443
+    protocol: TCP
     targetPort: https
   selector:
     control-plane: controller-manager
@@ -299,13 +326,14 @@ spec:
         ports:
         - containerPort: 8443
           name: https
+          protocol: TCP
       - args:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
         command:
         - /manager
-        image: russellsim/resource-replication-operator:latest
+        image: ghcr.io/russell/resource-replication-operator:latest
         livenessProbe:
           httpGet:
             path: /healthz
@@ -321,8 +349,8 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 100m
-            memory: 30Mi
+            cpu: 200m
+            memory: 100Mi
           requests:
             cpu: 100m
             memory: 20Mi
@@ -330,4 +358,5 @@ spec:
           allowPrivilegeEscalation: false
       securityContext:
         runAsUser: 65532
+      serviceAccountName: replication-operator-controller-manager
       terminationGracePeriodSeconds: 10
