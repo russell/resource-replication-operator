@@ -1,6 +1,6 @@
 module github.com/russell/resource-replication-operator
 
-go 1.15
+go 1.17
 
 require (
 	github.com/go-logr/logr v0.4.0
