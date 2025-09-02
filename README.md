@@ -83,10 +83,10 @@ status:
 
 ### Prerequisites
 
-- Go 1.17+
+- Go 1.24+
 - Docker
 - kubectl
-- Access to a Kubernetes cluster
+- Access to a Kubernetes cluster (1.30+)
 
 ### Local Development
 
@@ -119,8 +119,18 @@ make docker-build IMG=myregistry/resource-replication-operator:latest
 The operator consists of:
 
 - **ReplicatedResource Controller** - Watches for ReplicatedResource CRDs and orchestrates replication
-- **Resource Replicators** - Implement replication logic for specific resource types
+- **Resource Replicators** - Implement replication logic for specific resource types (Secrets, ConfigMaps)
 - **Field Indexing** - Enables efficient lookups for source resource changes
+- **Network Policies** - Optional security policies to restrict traffic to metrics and webhook endpoints
+
+## Technical Details
+
+Built with:
+- **Operator SDK v1.41.0** - Latest Kubernetes operator framework
+- **Go 1.24** - Modern Go runtime with enhanced performance
+- **Kubernetes API v0.33.0** - Support for latest Kubernetes features
+- **Controller Runtime v0.21.0** - Advanced controller patterns and observability
+- **Kubebuilder v4 Layout** - Modern project structure and scaffolding
 
 ## License
 
