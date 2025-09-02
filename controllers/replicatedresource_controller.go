@@ -114,8 +114,10 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 			Message:            "Successfully Replicated",
 		}}
 	} else {
-		log.Info("Successfully Replicated")
-		return ctrl.Result{}, nil
+		// No operation was performed - this could be due to cache consistency issues
+		// Requeue after a short delay to allow cache to sync
+		log.Info("No operation performed, requeuing to check for cache updates")
+		return ctrl.Result{RequeueAfter: 500 * time.Millisecond}, nil
 	}
 
 	if err := r.Status().Update(ctx, rr); err != nil {
