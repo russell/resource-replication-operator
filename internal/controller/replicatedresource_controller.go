@@ -102,21 +102,22 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 			Message:            replicateError.Error(),
 		}}
 
-	} else if op == controllerutil.OperationResultCreated || op == controllerutil.OperationResultUpdated {
+	} else if op == controllerutil.OperationResultCreated || op == controllerutil.OperationResultUpdated || op == controllerutil.OperationResultNone {
 		rr.Status.Phase = "Completed"
+		var message string
+		if op == controllerutil.OperationResultNone {
+			message = "Resource already up-to-date"
+		} else {
+			message = "Successfully Replicated"
+		}
 		rr.Status.Conditions = []utilsv1alpha1.ReplicatedResourceCondition{{
 			Type:               utilsv1alpha1.ReplicatedResourceComplete,
 			Status:             corev1.ConditionTrue,
 			LastProbeTime:      v1.Now(),
 			LastTransitionTime: v1.Now(),
 			Reason:             "Replicated",
-			Message:            "Successfully Replicated",
+			Message:            message,
 		}}
-	} else {
-		// No operation was performed - this could be due to cache consistency issues
-		// Requeue after a short delay to allow cache to sync
-		log.Info("No operation performed, requeuing to check for cache updates")
-		return ctrl.Result{RequeueAfter: 500 * time.Millisecond}, nil
 	}
 
 	if err := r.Status().Update(ctx, rr); err != nil {
