@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	utilsv1alpha1 "github.com/russell/resource-replication-operator/api/v1alpha1"
 	"github.com/russell/resource-replication-operator/replicator"
@@ -130,7 +129,7 @@ func (r *ReplicatedResourceReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (r *ReplicatedResourceReconciler) findObjectsForSecret(obj client.Object) []reconcile.Request {
+func (r *ReplicatedResourceReconciler) findObjectsForSecret(ctx context.Context, obj client.Object) []reconcile.Request {
 	return r.findObjectsForReplicatedResource(obj, "Secret")
 }
 
@@ -207,7 +206,7 @@ func (r *ReplicatedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Watches(
-			&source.Kind{Type: &corev1.Secret{}},
+			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSecret),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
