@@ -1,6 +1,6 @@
-# Built with operator-sdk v1.28.0
+# Built with operator-sdk v1.33.0
 domain: simopolis.xyz
-layout: go.kubebuilder.io/v3
+layout: go.kubebuilder.io/v4
 projectName: replication-operator
 repo: github.com/russell/resource-replication-operator
 resources:

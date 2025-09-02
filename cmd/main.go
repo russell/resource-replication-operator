@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	utilsv1alpha1 "github.com/russell/resource-replication-operator/api/v1alpha1"
-	"github.com/russell/resource-replication-operator/controllers"
+	"github.com/russell/resource-replication-operator/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -78,7 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ReplicatedResourceReconciler{
+	if err = (&controller.ReplicatedResourceReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ReplicatedResource"),
 		Scheme: mgr.GetScheme(),
