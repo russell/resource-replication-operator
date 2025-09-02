@@ -202,6 +202,7 @@ func (r *ReplicatedResourceReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("ReplicatedResource").
 		For(&utilsv1alpha1.ReplicatedResource{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
